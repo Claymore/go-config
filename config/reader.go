@@ -3,7 +3,26 @@ package config
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
+)
+
+// A ParseError is returned for parsing errors.
+// The first line is 1. The first column is 0.
+type ParseError struct {
+	Line   int   // Line where the error occurred
+	Column int   // Column (rune index) where the error occurred
+	Err    error // The actual error
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("line %d, column %d: %s", e.Line, e.Column, e.Err)
+}
+
+// These are the errors that can be returned in ParseError.Error
+var (
+	ErrParse = errors.New("generic parse error")
 )
 
 type Section struct {
@@ -19,13 +38,25 @@ func NewSection(name string) *Section {
 }
 
 type Reader struct {
-	r     *bufio.Reader
-	field bytes.Buffer
+	r      *bufio.Reader
+	field  bytes.Buffer
+	line   int
+	column int
 }
 
+// NewReader returns a new Reader that reads from r.
 func NewReader(r io.Reader) *Reader {
 	return &Reader{
 		r: bufio.NewReader(r),
+	}
+}
+
+// error creates a new ParseError based on err.
+func (r *Reader) error(err error) error {
+	return &ParseError{
+		Line:   r.line,
+		Column: r.column,
+		Err:    err,
 	}
 }
 
