@@ -1,3 +1,21 @@
+// Package config reads INI configuration files.
+//
+// A configaration file contains zero or more sections of zero or more options
+// per section. Each section is separated by the newline character. Options are
+// also separated by the newline character.
+//
+// Carriage returns before newline characters are silently removed.
+//
+// Blank lines and lines with only whitespace characters are ignored. Lines
+// beginning with comment characters ('#' and ';') are also ignored.
+//
+// Each section must have a header wrapped in square brackets. Any option
+// appearing on the next line after a section header will belong to this section.
+//
+// An options consists of a name and a value separated with ':' or '=' characters.
+// Leading and trailing spaces will be trimmed from options names. There might be
+// options without a value.
+
 package config
 
 import (
@@ -10,7 +28,7 @@ import (
 )
 
 // A ParseError is returned for parsing errors.
-// The first line is 1. The first column is 0.
+// The first line is 1. The first column is 1.
 type ParseError struct {
 	Line   int   // Line where the error occurred
 	Column int   // Column (rune index) where the error occurred
@@ -21,12 +39,13 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("line %d, column %d: %s", e.Line, e.Column, e.Err)
 }
 
-// These are the errors that can be returned in ParseError.Error
+// These are the errors that can be returned in ParseError.Error.
 var (
 	ErrParse              = errors.New("generic parse error")
 	ErrEmptySectionHeader = errors.New("empty section header")
 )
 
+// A Reader reads sections of options from a configation file.
 type Reader struct {
 	r              *bufio.Reader
 	field          bytes.Buffer
@@ -52,6 +71,9 @@ func (r *Reader) error(err error) error {
 	}
 }
 
+// readRune reads one rune from r, folding \r\n to \n and keeping track
+// of how far into the line we have read. r.column will point to the start
+// of this rune, not the end of this rune.
 func (r *Reader) readRune() (rune, error) {
 	r1, _, err := r.r.ReadRune()
 
@@ -77,6 +99,11 @@ func (r *Reader) unreadRune() {
 	r.column--
 }
 
+// ReadAll reads all the sections from r.
+// Each section is a map.
+// A successful call returns err == nil, not err == EOF. Because ReadAll is
+// defined to read until EOF, it does not treat end of file as an error to be
+// reported.
 func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 	sections = make(map[string]map[string]string)
 	for {
@@ -122,6 +149,7 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 	panic("unreachable")
 }
 
+// skip reads runes up to and including the rune delim or until error.
 func (r *Reader) skip(delim rune) error {
 	for {
 		r1, err := r.readRune()
