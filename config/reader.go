@@ -186,7 +186,7 @@ func (r *Reader) parseOption() (key string, value string, err error) {
 		}
 
 		switch r1 {
-		case '=':
+		case '=', ':':
 			if !foundDelim {
 				key = r.field.String()
 				r.skip(' ')
