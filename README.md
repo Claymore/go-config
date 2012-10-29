@@ -39,12 +39,12 @@ Examples
             fmt.Println("Error:", err)
             return
         }
-        for _, section := range sections {
-            fmt.Println(section)
+        for section, options := range sections {
+            fmt.Println(section, options)
         }
     }
 ```
 
 See also
 ==========
-[kless/goconfig](https://github.com/kless/goconfig) for Python ConfigParser flavoured API.
+See [kless/goconfig](https://github.com/kless/goconfig) for Python ConfigParser flavoured API.
