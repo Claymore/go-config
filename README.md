@@ -13,7 +13,7 @@ For example:
 Installation
 ==========
 
-    go get Claymore/go-config/config
+    go get github.com/Claymore/go-config/config
 
 Examples
 ==========
