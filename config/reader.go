@@ -110,19 +110,21 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 		r.line++
 		r.column = 0
 		r1, err := r.readRune()
-		if err == io.EOF {
-			return sections, nil
-		} else if err != nil {
-			return nil, err
-		}
 
-		switch r1 {
-		case '#', ';':
-			r.skip('\n')
-		case '[':
+		switch {
+		case err == io.EOF:
+			return sections, nil
+		case err != nil:
+			return sections, err
+		case strings.ContainsRune("#;", r1):
+			err = r.skip('\n')
+			if err != nil && err != io.EOF {
+				return sections, err
+			}
+		case r1 == '[':
 			section, err := r.parseHeader()
 			if err != nil {
-				return nil, err
+				return sections, err
 			}
 			if _, ok := sections[section]; !ok {
 				sections[section] = make(map[string]string)
@@ -132,7 +134,7 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 			r.unreadRune()
 			key, value, err := r.parseOption()
 			if err != nil {
-				return nil, err
+				return sections, err
 			}
 			key = strings.TrimSpace(key)
 
@@ -167,26 +169,22 @@ func (r *Reader) parseHeader() (section string, err error) {
 	r.field.Reset()
 	for {
 		r1, err := r.readRune()
-		if err == io.EOF {
-			return section, r.error(ErrParse)
-		} else if err != nil {
-			return section, err
-		}
 
-		switch r1 {
-		case '#', ';':
+		switch {
+		case err == io.EOF || strings.ContainsRune("#;", r1):
 			return section, r.error(ErrParse)
-		case ']':
+		case err != nil:
+			return section, err
+		case r1 == ']':
 			section = r.field.String()
-			if section == "" {
+			if len(section) == 0 {
 				return section, r.error(ErrEmptySectionHeader)
 			}
 			err = r.skip('\n')
-			if err == nil || err == io.EOF {
-				return section, nil
-			} else {
+			if err != nil && err != io.EOF {
 				return section, err
 			}
+			return section, nil
 		default:
 			r.field.WriteRune(r1)
 		}
@@ -202,33 +200,28 @@ func (r *Reader) parseOption() (key string, value string, err error) {
 	)
 	for {
 		r1, err := r.readRune()
-		if err == io.EOF {
+
+		switch {
+		case err == io.EOF || r1 == '\n':
 			value = r.field.String()
 			return key, value, nil
-		}
-		if err != nil {
+		case err != nil:
 			return key, value, err
-		}
-
-		if (lastRune == 0 || lastRune == ' ') && (r1 == '#' || r1 == ';') {
+		case (lastRune == 0 || lastRune == ' ') && strings.ContainsRune("#;", r1):
 			value = r.field.String()
-			return key, value[:len(value)-1], r.skip('\n')
-		}
-
-		switch r1 {
-		case '=', ':':
-			if !foundDelim {
-				key = r.field.String()
-				r.skip(' ')
-				foundDelim = true
-				r.field.Reset()
-			} else {
-				r.field.WriteRune(r1)
-				lastRune = r1
+			err = r.skip('\n')
+			if err != nil && err != io.EOF {
+				return key, value, err
 			}
-		case '\n':
-			value = r.field.String()
-			return key, value, nil
+			return key, value[:len(value)-1], nil
+		case !foundDelim && strings.ContainsRune("=:", r1):
+			key = r.field.String()
+			foundDelim = true
+			r.field.Reset()
+			err = r.skip(' ')
+			if err != nil && err != io.EOF {
+				return key, value, err
+			}
 		default:
 			r.field.WriteRune(r1)
 			lastRune = r1
