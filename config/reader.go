@@ -1,6 +1,6 @@
 // Package config reads INI configuration files.
 //
-// A configaration file contains zero or more sections of zero or more options
+// A configuration file contains zero or more sections of zero or more options
 // per section. Each section is separated by the newline character. Options are
 // also separated by the newline character.
 //
@@ -45,7 +45,7 @@ var (
 	ErrEmptySectionHeader = errors.New("empty section header")
 )
 
-// A Reader reads sections of options from a configation file.
+// A Reader reads sections of options from a configuration file.
 type Reader struct {
 	r              *bufio.Reader
 	field          bytes.Buffer
