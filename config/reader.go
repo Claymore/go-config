@@ -167,7 +167,9 @@ func (r *Reader) parseHeader() (section string, err error) {
 	r.field.Reset()
 	for {
 		r1, err := r.readRune()
-		if err != nil {
+		if err == io.EOF {
+			return section, r.error(ErrParse)
+		} else if err != nil {
 			return section, err
 		}
 
