@@ -116,12 +116,15 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 			return sections, nil
 		case err != nil:
 			return sections, err
-		case strings.ContainsRune("#;", r1):
+		}
+
+		switch r1 {
+		case ';', '#':
 			err = r.skip('\n')
 			if err != nil && err != io.EOF {
 				return sections, err
 			}
-		case r1 == '[':
+		case '[':
 			section, err := r.parseHeader()
 			if err != nil {
 				return sections, err
@@ -171,11 +174,16 @@ func (r *Reader) parseHeader() (section string, err error) {
 		r1, err := r.readRune()
 
 		switch {
-		case err == io.EOF || strings.ContainsRune("#;", r1):
+		case err == io.EOF:
 			return section, r.error(ErrParse)
 		case err != nil:
 			return section, err
-		case r1 == ']':
+		}
+
+		switch r1 {
+		case ';', '#':
+			return section, r.error(ErrParse)
+		case ']':
 			section = r.field.String()
 			if len(section) == 0 {
 				return section, r.error(ErrEmptySectionHeader)
@@ -202,19 +210,22 @@ func (r *Reader) parseOption() (key string, value string, err error) {
 		r1, err := r.readRune()
 
 		switch {
-		case err == io.EOF || r1 == '\n':
+		case err == io.EOF:
 			value = r.field.String()
 			return key, value, nil
 		case err != nil:
 			return key, value, err
-		case (lastRune == 0 || lastRune == ' ') && strings.ContainsRune("#;", r1):
+		case r1 == '\n':
+			value = r.field.String()
+			return key, value, nil
+		case (lastRune == 0 || lastRune == ' ') && (r1 == ';' || r1 == '#'):
 			value = r.field.String()
 			err = r.skip('\n')
 			if err != nil && err != io.EOF {
 				return key, value, err
 			}
 			return key, value[:len(value)-1], nil
-		case !foundDelim && strings.ContainsRune("=:", r1):
+		case !foundDelim && (r1 == '=' || r1 == ':'):
 			key = r.field.String()
 			foundDelim = true
 			r.field.Reset()
