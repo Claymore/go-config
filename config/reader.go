@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 )
 
 // A ParseError is returned for parsing errors.
@@ -218,7 +219,7 @@ func (r *Reader) parseOption() (key string, value string, err error) {
 		case r1 == '\n':
 			value = r.field.String()
 			return key, value, nil
-		case (lastRune == 0 || lastRune == ' ') && (r1 == ';' || r1 == '#'):
+		case unicode.IsSpace(lastRune) && (r1 == ';' || r1 == '#'):
 			value = r.field.String()
 			err = r.skip('\n')
 			if err != nil && err != io.EOF {
