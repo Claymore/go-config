@@ -42,8 +42,8 @@ func (e *ParseError) Error() string {
 
 // These are the errors that can be returned in ParseError.Error.
 var (
-	ErrParse              = errors.New("generic parse error")
-	ErrEmptySectionHeader = errors.New("empty section header")
+	ErrInvalidOption        = errors.New("invalid option")
+	ErrInvalidSectionHeader = errors.New("invalid section header")
 )
 
 // A Reader reads sections of options from a configuration file.
@@ -140,7 +140,12 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 			if err != nil {
 				return sections, err
 			}
+
 			key = strings.TrimSpace(key)
+			value = strings.TrimSpace(value)
+			if (key == "" && value != "") || (key != "" && value == "") {
+				return sections, r.error(ErrInvalidOption)
+			}
 
 			if key != "" {
 				if r.currentSection == "default" {
@@ -176,18 +181,18 @@ func (r *Reader) parseHeader() (section string, err error) {
 
 		switch {
 		case err == io.EOF:
-			return section, r.error(ErrParse)
+			return section, r.error(ErrInvalidSectionHeader)
 		case err != nil:
 			return section, err
 		}
 
 		switch r1 {
-		case ';', '#':
-			return section, r.error(ErrParse)
+		case ';', '#', '[', '\n':
+			return section, r.error(ErrInvalidSectionHeader)
 		case ']':
-			section = r.field.String()
+			section = strings.TrimSpace(r.field.String())
 			if section == "" {
-				return section, r.error(ErrEmptySectionHeader)
+				return section, r.error(ErrInvalidSectionHeader)
 			}
 			err = r.skip('\n')
 			if err != nil && err != io.EOF {
@@ -230,10 +235,6 @@ func (r *Reader) parseOption() (key string, value string, err error) {
 			key = r.field.String()
 			foundDelim = true
 			r.field.Reset()
-			err = r.skip(' ')
-			if err != nil && err != io.EOF {
-				return key, value, err
-			}
 		default:
 			r.field.WriteRune(r1)
 			lastRune = r1

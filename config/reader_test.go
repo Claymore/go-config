@@ -23,13 +23,33 @@ func TestParseValidSectionHeader(t *testing.T) {
 	}
 }
 
-func TestParseInvalidSectionHeader(t *testing.T) {
+func TestParseInvalidSectionHeader1(t *testing.T) {
 	m := new(bytes.Buffer)
-	m.WriteString("[Some section\n")
+	m.WriteString("[Some section")
 	reader := NewReader(m)
 	_, err := reader.ReadAll()
-	if err.(*ParseError).Err != ErrParse {
-		t.Errorf("ReadAll should return %q error, returned %q", ErrParse, err)
+	if err.(*ParseError).Err != ErrInvalidSectionHeader {
+		t.Errorf("ReadAll should return %q error, returned %q", ErrInvalidSectionHeader, err)
+	}
+}
+
+func TestParseInvalidSectionHeader2(t *testing.T) {
+	m := new(bytes.Buffer)
+	m.WriteString("[Some section[\n")
+	reader := NewReader(m)
+	_, err := reader.ReadAll()
+	if err.(*ParseError).Err != ErrInvalidSectionHeader {
+		t.Errorf("ReadAll should return %q error, returned %q", ErrInvalidSectionHeader, err)
+	}
+}
+
+func TestParseInvalidSectionHeader3(t *testing.T) {
+	m := new(bytes.Buffer)
+	m.WriteString("[Some section]\n[Oops\noption = value")
+	reader := NewReader(m)
+	_, err := reader.ReadAll()
+	if err.(*ParseError).Err != ErrInvalidSectionHeader {
+		t.Errorf("ReadAll should return %q error, returned %q", ErrInvalidSectionHeader, err)
 	}
 }
 
@@ -38,8 +58,8 @@ func TestParseEmptySectionHeader(t *testing.T) {
 	m.WriteString("[]")
 	reader := NewReader(m)
 	_, err := reader.ReadAll()
-	if err.(*ParseError).Err != ErrEmptySectionHeader {
-		t.Errorf("ReadAll should return %q error, returned %q", ErrEmptySectionHeader, err)
+	if err.(*ParseError).Err != ErrInvalidSectionHeader {
+		t.Errorf("ReadAll should return %q error, returned %q", ErrInvalidSectionHeader, err)
 	}
 }
 
