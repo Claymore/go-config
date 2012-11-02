@@ -141,7 +141,7 @@ func (r *Reader) ReadAll() (sections map[string]map[string]string, err error) {
 			}
 			key = strings.TrimSpace(key)
 
-			if len(key) != 0 {
+			if key != "" {
 				if r.currentSection == "default" {
 					if _, ok := sections["default"]; !ok {
 						sections["default"] = make(map[string]string)
@@ -185,7 +185,7 @@ func (r *Reader) parseHeader() (section string, err error) {
 			return section, r.error(ErrParse)
 		case ']':
 			section = r.field.String()
-			if len(section) == 0 {
+			if section == "" {
 				return section, r.error(ErrEmptySectionHeader)
 			}
 			err = r.skip('\n')
